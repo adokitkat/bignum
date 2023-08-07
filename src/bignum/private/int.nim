@@ -26,12 +26,12 @@ proc validBase(base: cint) =
 
 proc newInt*(x: culong): Int =
   ## Allocates and returns a new Int set to `x`.
-  new(result, finalizeMpz)
+  new(result)
   mpz_init_set_ui(result[], x)
 
 proc newInt*(x: int = 0): Int =
   ## Allocates and returns a new Int set to `x`.
-  new(result, finalizeMpz)
+  new(result)
   when isLLP64():
     if x.fitsLLP64Long:
       mpz_init_set_si(result[], x.clong)
@@ -50,7 +50,7 @@ proc newInt*(x: int = 0): Int =
 proc newInt*(s: string, base: cint = 10): Int =
   ## Allocates and returns a new Int set to `s`, interpreted in the given `base`.
   validBase(base)
-  new(result, finalizeMpz)
+  new(result)
   if mpz_init_set_str(result[], s, base) == -1:
     raise newException(ValueError, "String not in correct base")
 
@@ -60,11 +60,11 @@ proc clear*(z: Int) =
   ## This normally happens on a finalizer call, but if you want immediate
   ## deallocation you can call it.
   GCunref(z)
-  finalizeMpz(z)
+  `=destroy`(z)
 
 proc clone*(z: Int): Int =
   ## Returns a clone of `z`.
-  new(result, finalizeMpz)
+  new(result)
   mpz_init_set(result[], z[])
 
 proc digits*(z: Int, base: range[(2.cint) .. (62.cint)] = 10): csize_t =
@@ -77,7 +77,7 @@ proc `$`*(z: Int, base: cint = 10): string =
   ## string in the given `base`.
   validBase(base)
   result = newString(digits(z, base) + 2)
-  result.setLen(mpz_get_str(result, base, z[]).len)
+  result.setLen(mpz_get_str(result.cstring, base, z[]).len)
 
 proc set*(z, x: Int): Int =
   ## Sets `z` to `x` and returns `z`.
@@ -515,14 +515,14 @@ proc even*(z: Int): bool =
 proc `div`*(z, x, y: Int): Int =
   ## Sets `z` to the quotient x/y for `y` != 0 and returns `z`.
   ## `div` implements truncated division towards zero.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   mpz_tdiv_q(result[], x[], y[])
 
 proc `div`*(z, x: Int, y: culong): Int =
   ## Sets `z` to the quotient x/y for `y` != 0 and returns `z`.
   ## `div` implements truncated division towards zero.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   discard mpz_tdiv_q_ui(result[], x[], y)
 
@@ -547,14 +547,14 @@ proc `div`*(x: int | culong, y: Int): Int =
 proc `mod`*(z, x, y: Int): Int =
   ## Sets `z` to the remainder x/y for `y` != 0 and returns `z`.
   ## `mod` implements truncated division towards zero.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   mpz_tdiv_r(result[], x[], y[])
 
 proc `mod`*(z, x: Int, y: culong): Int =
   ## Sets `z` to the remainder x/y for `y` != 0 and returns `z`.
   ## `mod` implements truncated division towards zero.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   discard mpz_tdiv_r_ui(result[], x[], y)
 
@@ -607,7 +607,7 @@ proc divMod*(q, r, x, y: Int): tuple[q, r: Int] =
   ## Sets `q` to the quotient and `r` to the remainder resulting from x/y for
   ## `y` != 0 and returns the tuple (`q`, `r`).
   ## `divMod` implements truncated division towards zero.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = (q: q, r: r)
   mpz_tdiv_qr(q[], r[], x[], y[])
 
@@ -615,7 +615,7 @@ proc divMod*(q, r, x: Int, y: culong): tuple[q, r: Int] =
   ## Sets `q` to the quotient and `r` to the remainder resulting from x/y for
   ## `y` != 0 and returns the tuple (`q`, `r`).
   ## `divMod` implements truncated division towards zero.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = (q: q, r: r)
   discard mpz_tdiv_qr_ui(q[], r[], x[], y)
 
@@ -644,7 +644,7 @@ proc fdiv*(z, x, y: Int): Int =
   ## Sets `z` to the quotient x/y for `y` != 0 and returns `z`.
   ## `fdiv` implements truncated division towards negative infinity.
   ## The f stands for “floor”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   mpz_fdiv_q(result[], x[], y[])
 
@@ -652,7 +652,7 @@ proc fdiv*(z, x: Int, y: culong): Int =
   ## Sets `z` to the quotient x/y for `y` != 0 and returns `z`.
   ## `fdiv` implements truncated division towards negative infinity.
   ## The f stands for “floor”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   discard mpz_fdiv_q_ui(result[], x[], y)
 
@@ -691,7 +691,7 @@ proc fmod*(z, x, y: Int): Int =
   ## Sets `z` to the remainder x/y for `y` != 0 and returns `z`.
   ## `fmod` implements truncated division towards negative infinity.
   ## The f stands for “floor”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   mpz_fdiv_r(result[], x[], y[])
 
@@ -699,7 +699,7 @@ proc fmod*(z, x: Int, y: culong): Int =
   ## Sets `z` to the remainder x/y for `y` != 0 and returns `z`.
   ## `fmod` implements truncated division towards negative infinity.
   ## The f stands for “floor”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   discard mpz_fdiv_r_ui(result[], x[], y)
 
@@ -739,7 +739,7 @@ proc fdivMod*(q, r, x, y: Int): tuple[q, r: Int] =
   ## `y` != 0 and returns the tuple (`q`, `r`).
   ## `fdivMod` implements truncated division towards negative infinity.
   ## The f stands for “floor”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = (q: q, r: r)
   mpz_fdiv_qr(q[], r[], x[], y[])
 
@@ -748,7 +748,7 @@ proc fdivMod*(q, r, x: Int, y: culong): tuple[q, r: Int] =
   ## `y` != 0 and returns the tuple (`q`, `r`).
   ## `fdivMod` implements truncated division towards negative infinity.
   ## The f stands for “floor”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = (q: q, r: r)
   discard mpz_fdiv_qr_ui(q[], r[], x[], y)
 
@@ -780,7 +780,7 @@ proc cdiv*(z, x, y: Int): Int =
   ## Sets `z` to the quotient x/y for `y` != 0 and returns `z`.
   ## `cdiv` implements truncated division towards positive infinity.
   ## The c stands for “ceil”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   mpz_cdiv_q(result[], x[], y[])
 
@@ -788,7 +788,7 @@ proc cdiv*(z, x: Int, y: culong): Int =
   ## Sets `z` to the quotient x/y for `y` != 0 and returns `z`.
   ## `cdiv` implements truncated division towards positive infinity.
   ## The c stands for “ceil”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   discard mpz_cdiv_q_ui(result[], x[], y)
 
@@ -817,7 +817,7 @@ proc cmod*(z, x, y: Int): Int =
   ## Sets `z` to the remainder x/y for `y` != 0 and returns `z`.
   ## `cmod` implements truncated division towards positive infinity.
   ## The c stands for “ceil”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   mpz_cdiv_r(result[], x[], y[])
 
@@ -825,7 +825,7 @@ proc cmod*(z, x: Int, y: culong): Int =
   ## Sets `z` to the remainder x/y for `y` != 0 and returns `z`.
   ## `cmod` implements truncated division towards positive infinity.
   ## The c stands for “ceil”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   discard mpz_cdiv_r_ui(result[], x[], y)
 
@@ -855,7 +855,7 @@ proc cdivMod*(q, r, x, y: Int): tuple[q, r: Int] =
   ## `y` != 0 and returns the tuple (`q`, `r`).
   ## `cdivMod` implements truncated division towards positive infinity.
   ## The c stands for “ceil”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = (q: q, r: r)
   mpz_cdiv_qr(q[], r[], x[], y[])
 
@@ -864,7 +864,7 @@ proc cdivMod*(q, r, x: Int, y: culong): tuple[q, r: Int] =
   ## `y` != 0 and returns the tuple (`q`, `r`).
   ## `cdivMod` implements truncated division towards positive infinity.
   ## The c stands for “ceil”.
-  if y == 0: raise newException(DivByZeroError, "Division by zero")
+  if y == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = (q: q, r: r)
   discard mpz_cdiv_qr_ui(q[], r[], x[], y)
 
@@ -896,7 +896,7 @@ proc fac*(z, x: Int): Int =
   ## Sets `z` to the factorial of `x` and returns `z`.
   if x < 2:
     if x.negative:
-      raise newException(RangeError, "Negative factorial")
+      raise newException(RangeDefect, "Negative factorial")
     else:
       return z.set(1)
 
@@ -923,7 +923,7 @@ proc fac*(z: Int, x: int): Int =
   ## Sets `z` to the factorial of `x` and returns `z`.
   if x < 2:
     if x < 0:
-      raise newException(RangeError, "Negative factorial")
+      raise newException(RangeDefect, "Negative factorial")
     else:
       return z.set(1)
 

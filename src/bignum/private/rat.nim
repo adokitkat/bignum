@@ -13,7 +13,7 @@ proc denomRef(x: Rat): Int =
 
 proc newRat*(): Rat =
   ## Creates a new Rat and set it to 0/1.
-  new(result, finalizeMpq)
+  new(result)
   mpq_init(result[])
 
 proc newRat*(f: float): Rat =
@@ -21,12 +21,12 @@ proc newRat*(f: float): Rat =
   ## this conversion is exact.
   if classify(f) == fcNan or f == Inf or f == NegInf:
     raise newException(ValueError, "Rat does not support NaN, Inf and NegInf")
-  new(result, finalizeMpq)
+  new(result)
   mpq_set_d(result[], f)
 
 proc newRat*(a, b: Int): Rat =
   ## Creates a new Rat with numerator `a` and denominator `b`.
-  if b.sign == 0: raise newException(DivByZeroError, "Division by zero")
+  if b.sign == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = newRat()
   discard result.numRef.set(a)
   discard result.denomRef.set(b)
@@ -34,14 +34,14 @@ proc newRat*(a, b: Int): Rat =
 
 proc newRat*(a, b: culong): Rat =
   ## Creates a new Rat with numerator `a` and denominator `b`.
-  if b == 0: raise newException(DivByZeroError, "Division by zero")
+  if b == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = newRat()
   mpq_set_ui(result[], a, b)
   mpq_canonicalize(result[])
 
 proc newRat*(a: clong, b: culong): Rat =
   ## Creates a new Rat with numerator `a` and denominator `b`.
-  if b == 0: raise newException(DivByZeroError, "Division by zero")
+  if b == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = newRat()
   mpq_set_si(result[], a, b)
   mpq_canonicalize(result[])
@@ -106,7 +106,7 @@ proc `$`*(z: Rat, base: range[(2.cint) .. (36.cint)] = 10): string =
   ## The stringify operator for a Rat argument. Returns `z` converted to a
   ## string in the given `base`.
   result = newString(digits(z.numRef, base) + digits(z.denomRef, base) + 3)
-  result.setLen(mpq_get_str(result, base, z[]).len)
+  result.setLen(mpq_get_str(result.cstring, base, z[]).len)
 
 proc num*(x: Rat): Int =
   ## Returns the numerator of `x`.
@@ -126,7 +126,7 @@ proc setNum*(z: Rat, x: int | culong | Int): Rat =
 
 proc setDenom*(z: Rat, x: int | culong | Int): Rat =
   ## Sets the denominator of `z` to `x` and returns `z`.
-  if x == 0: raise newException(DivByZeroError, "Division by zero")
+  if x == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   discard result.denomRef.set(x)
   mpq_canonicalize(result[])
@@ -145,7 +145,7 @@ proc set*(z: Rat, x: float): Rat =
 
 proc set*(z: Rat, a, b: Int): Rat =
   ## Sets `z` to `a`/`b` and returns `z`.
-  if b.sign == 0: raise newException(DivByZeroError, "Division by zero")
+  if b.sign == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   discard result.numRef.set(a)
   discard result.denomRef.set(b)
@@ -153,14 +153,14 @@ proc set*(z: Rat, a, b: Int): Rat =
 
 proc set*(z: Rat, a, b: culong): Rat =
   ## Sets `z` to `a`/`b` and returns `z`.
-  if b == 0: raise newException(DivByZeroError, "Division by zero")
+  if b == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   mpq_set_ui(result[], a, b)
   mpq_canonicalize(result[])
 
 proc set*(z: Rat, a: clong, b: culong): Rat =
   ## Sets `z` to `a`/`b` and returns `z`.
-  if b == 0: raise newException(DivByZeroError, "Division by zero")
+  if b == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   mpq_set_si(result[], a, b)
   mpq_canonicalize(result[])
@@ -429,7 +429,7 @@ proc `*=`*(z: Rat, x: int | culong | Int | Rat) =
 
 proc divide*(z, x, y: Rat): Rat =
   ## Sets `z` to the quotient x/y and returns `z`.
-  if y.sign == 0: raise newException(DivByZeroError, "Division by zero")
+  if y.sign == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   mpq_div(z[], x[], y[])
 
@@ -462,7 +462,7 @@ proc `/`*(x: int | culong, y: Int): Rat =
 
 proc inv*(z, x: Rat): Rat =
   ## Sets `z` to 1/`x` and returns `z`.
-  if x.sign == 0: raise newException(DivByZeroError, "Division by zero")
+  if x.sign == 0: raise newException(DivByZeroDefect, "Division by zero")
   result = z
   mpq_inv(z[], x[])
 
